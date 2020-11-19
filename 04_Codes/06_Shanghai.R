@@ -8,11 +8,17 @@
 
 ##---- Sample ----
 # sample
-chc.history <- read.xlsx("06_Deliveries/CHC_MAX_16Q420Q1_0622_m_add_raw_sales_value.xlsx", 
-                         sheet = 2, check.names = FALSE)
+chc.history <- read.xlsx("06_Deliveries/Servier_CHC_2016Q4_2020Q2_v3.xlsx", 
+                         check.names = FALSE)
 
 sh.bj.sample <- chc.history %>% 
-  mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0)) %>% 
+  mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0), 
+         Pack_ID = if_else(stri_sub(Pack_ID, 1, 5) == '47775', 
+                           stri_paste('58906', stri_sub(Pack_ID, 6, 7)), 
+                           Pack_ID), 
+         Pack_ID = if_else(stri_sub(Pack_ID, 1, 5) == '06470', 
+                           stri_paste('64895', stri_sub(Pack_ID, 6, 7)), 
+                           Pack_ID)) %>% 
   filter(Channel == "CHC", 
          Province %in% c("上海", "北京"), 
          stri_sub(Date, 1, 4) %in% c("2017", "2018", "2019"), 
@@ -25,7 +31,7 @@ sh.bj.sample <- chc.history %>%
             sales = sum(Sales, na.rm = TRUE)) %>% 
   ungroup()
 
-sh.19q1 <- chc.history %>% 
+sh.19q3 <- chc.history %>% 
   mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0), 
          Pack_ID = if_else(stri_sub(Pack_ID, 1, 5) == '47775', 
                            stri_paste('58906', stri_sub(Pack_ID, 6, 7)), 
@@ -35,7 +41,7 @@ sh.19q1 <- chc.history %>%
                            Pack_ID)) %>% 
   filter(Channel == "CHC", 
          Province == "上海", 
-         Date == "2019Q1", 
+         Date == "2019Q3", 
          !is.na(Pack_ID), 
          Sales > 0) %>% 
   group_by(quarter = Date, market = MKT, atc3 = ATC3, 
@@ -44,31 +50,30 @@ sh.19q1 <- chc.history %>%
             city = first(na.omit(City)),
             units = sum(Units, na.rm = TRUE),
             sales = sum(Sales, na.rm = TRUE)) %>% 
-  ungroup() %>% 
-  mutate(price = sales / units)
+  ungroup()
 
 # pack ID existing & missing
-sh.exist.pack <- sh.19q1$packid[which(sh.19q1$packid %in% sh.bj.sample$packid)]
-sh.miss.pack <- sh.19q1$packid[which(!(sh.19q1$packid %in% sh.bj.sample$packid))]
+sh.exist.pack <- sh.19q3$packid[which(sh.19q3$packid %in% sh.bj.sample$packid)]
+sh.miss.pack <- sh.19q3$packid[which(!(sh.19q3$packid %in% sh.bj.sample$packid))]
 
 # growth of existing pack
 ## 去掉growth太大的pack
 growth.exist <- raw.total %>% 
-  filter(city == "北京", quarter %in% c("2019Q1", "2020Q1")) %>% 
-  filter(packid %in% unique(sh.19q1$packid)) %>% 
+  filter(city == "北京", quarter %in% c("2019Q3", "2020Q3")) %>% 
+  filter(packid %in% unique(sh.19q3$packid)) %>% 
   mutate(province = "上海",
          city = "上海") %>% 
   group_by(quarter, city, packid) %>% 
   summarise(sales = sum(sales, na.rm = TRUE)) %>% 
   ungroup() %>% 
   spread(quarter, sales, fill = 0) %>% 
-  mutate(growth_1920q1 = `2020Q1` / `2019Q1`) %>% 
-  select(city, packid, growth_1920q1) %>% 
-  mutate(growth_1920q1 = if_else(is.na(growth_1920q1) | 
-                                   is.infinite(growth_1920q1), 
+  mutate(growth_1920q3 = `2020Q3` / `2019Q3`) %>% 
+  select(city, packid, growth_1920q3) %>% 
+  mutate(growth_1920q3 = if_else(is.na(growth_1920q3) | 
+                                   is.infinite(growth_1920q3), 
                                  1, 
-                                 growth_1920q1)) %>% 
-  filter(growth_1920q1 <= 1.5, growth_1920q1 > 0)
+                                 growth_1920q3)) %>% 
+  filter(growth_1920q3 <= 1.5, growth_1920q3 > 0)
 
 
 ##---- K-nn model ----
@@ -123,17 +128,17 @@ weight.growth <- sh.indice %>%
   left_join(sh.weight, by = c("packid", "knn_level")) %>% 
   left_join(growth.exist, by = c("knn_pack" = "packid")) %>% 
   group_by(city, packid) %>% 
-  summarise(growth_1920q1 = sum(growth_1920q1 * knn_weight, na.rm = TRUE)) %>% 
+  summarise(growth_1920q3 = sum(growth_1920q3 * knn_weight, na.rm = TRUE)) %>% 
   ungroup() %>% 
-  select(city, packid, growth_1920q1)
+  select(city, packid, growth_1920q3)
 
 # growth
-surplus <- setdiff(sh.19q1$packid[!(sh.19q1$packid %in% growth.exist$packid)], 
+surplus <- setdiff(sh.19q3$packid[!(sh.19q3$packid %in% growth.exist$packid)], 
                    ims.sales$packid)
 
 surplus.growth <- data.frame(city = "上海",
                              packid = surplus) %>% 
-  mutate(growth_1920q1 = 1)
+  mutate(growth_1920q3 = 1)
 
 sh.growth <- bind_rows(merge(growth.exist, 0),
                        merge(weight.growth, 1),
@@ -141,18 +146,47 @@ sh.growth <- bind_rows(merge(growth.exist, 0),
   rename("flag" = "y")
 
 
+##---- Price ----
+sh.price.origin <- price.origin %>% 
+  filter(city == '北京') %>% 
+  mutate(province = '上海', 
+         city = '上海')
+
+sh.price.city <- price.city %>% 
+  filter(city == '北京') %>% 
+  mutate(province = '上海', 
+         city = '上海')
+
+sh.price.province <- price.province %>% 
+  filter(province == '北京') %>% 
+  mutate(province = '上海')
+
+sh.price.year <- price.year %>% 
+  filter(province == '北京') %>% 
+  mutate(province = '上海')
+
+
 ##---- Result ----
-proj.sh1 <- sh.19q1 %>% 
+proj.sh <- sh.19q3 %>% 
   left_join(sh.growth, by = c("city", "packid")) %>% 
-  mutate(sales = sales * growth_1920q1,
-         price = if_else(packid == '4268604', 103.26608, price), 
-         price = if_else(packid == '4268602', 52.12415, price), 
-         units = sales / price,
-         quarter = "2020Q1",
+  mutate(sales = sales * growth_1920q3,
+         quarter = "2020Q3",
          year = "2020") %>% 
   filter(sales > 0) %>% 
+  left_join(sh.price.origin, by = c("province", "city", "quarter", "packid")) %>% 
+  left_join(sh.price.city, by = c("province", "city", "year", "packid")) %>% 
+  left_join(sh.price.province, by = c("province", "quarter", "packid")) %>% 
+  left_join(sh.price.year, by = c("province", "year", "packid")) %>% 
+  left_join(price.pack, by = c("quarter", "packid")) %>% 
+  left_join(price.pack.year, by = c('year', 'packid')) %>% 
+  mutate(price = if_else(is.na(price), price_city, price), 
+         price = if_else(is.na(price), price_prov, price), 
+         price = if_else(is.na(price), price_year, price), 
+         price = if_else(is.na(price), price_pack, price), 
+         price = if_else(is.na(price), price_pack_year, price), 
+         units = sales / price) %>% 
   select(year, quarter, province, city, market, atc3, molecule, packid, 
          units, sales, price)
 
-write.xlsx(proj.sh1, "03_Outputs/06_Seriver_CHC_Shanghai_2020Q1.xlsx")
+write.xlsx(proj.sh, "03_Outputs/06_Seriver_CHC_Shanghai.xlsx")
 

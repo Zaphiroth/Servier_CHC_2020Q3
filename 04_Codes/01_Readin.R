@@ -46,8 +46,8 @@ market.def <- read_xlsx("02_Inputs/Market_Definition_20200824.xlsx") %>%
   filter(!is.na(market))
 
 ## target city
-target.prov <- c("北京", "福建", "广东", "江苏", "上海", "浙江", "安徽", "山东")
-target.city <- c("北京", "常州", "福州", "广州", "杭州", "南京", 
+kTargetProv <- c("北京", "福建", "广东", "江苏", "上海", "浙江", "安徽", "山东")
+kTargetCity <- c("北京", "常州", "福州", "广州", "杭州", "南京", 
                  "宁波", "泉州", "厦门", "上海", "苏州", "温州", 
                  "无锡", "济南", "徐州", "合肥", "绍兴", "青岛")
 
