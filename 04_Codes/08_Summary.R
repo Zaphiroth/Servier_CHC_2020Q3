@@ -318,12 +318,13 @@ chc.result <- chc.history %>%
          Corp_Desc = if_else(Prod_Desc == 'ONGLYZA', 'ASTRAZENECA GROUP', Corp_Desc)) %>% 
   bind_rows(chc.add) %>% 
   filter(Sales > 0, Units > 0, DosageUnits > 0, 
+         Pack_ID %in% market.def$packid, 
          !(MKT %in% c("HTN", "IHD") & 
              !(stri_sub(Package, 1, 3) %in% c("CAP", "TAB", "PIL")))) %>% 
-  filter(!(Channel == 'CHC' & 
-             City %in% c('福州', '泉州', '厦门', '济南', '青岛') & 
-             Pack_ID %in% c('5890602', '4268602', '4268604', '5739702', '5518904') & 
-             Date %in% c('2020Q2'))) %>% 
+  # filter(!(Channel == 'CHC' & 
+  #            City %in% c('福州', '泉州', '厦门', '济南', '青岛') & 
+  #            Pack_ID %in% c('5890602', '4268602', '4268604', '5739702', '5518904') & 
+  #            Date %in% c('2020Q2'))) %>% 
   # bind_rows(chc.dpp4[chc.dpp4$Date == '2020Q2', ]) %>% 
   mutate(`Period-MAT` = case_when(
     Date %in% c('2020Q3', '2020Q2', '2020Q1', '2019Q4') ~ 'MAT20Q3', 

@@ -8,7 +8,7 @@
 
 ##---- Readin ----
 # pack info
-chs.pack <- read_xlsx("02_Inputs/ims_mapping1904.xlsx") %>% 
+chs.pack <- read_xlsx("02_Inputs/ims.mapping1904.xlsx") %>% 
   distinct(packid = stri_pad_left(Pack_Id, 7, 0), pack_desc = Pck_Desc, 
            corp_desc = Corp_Desc, pack_size = PckSize_Desc)
 
