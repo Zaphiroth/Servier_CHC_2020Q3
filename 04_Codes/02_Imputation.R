@@ -9,11 +9,11 @@
 ##---- Imputing inside existing provinces ----
 raw.imp <- raw.total %>% 
   filter(city %in% kTargetCity) %>% 
-  filter(province %in% c('安徽', '北京', '江苏')) %>% 
+  filter(province %in% c('安徽', '北京', '江苏', '山东')) %>% 
   mutate(quarter = stri_sub(quarter, 5, 6), 
          month = stri_sub(date, 5, 6))
 
-# quarterly date continuity
+## quarterly date continuity
 date.continuity <- raw.imp %>% 
   distinct(province, city, district, pchc, market, year, quarter, month) %>% 
   count(province, city, district, pchc, market, year, quarter) %>% 
@@ -23,7 +23,7 @@ date.continuity <- raw.imp %>%
   mutate(cnt_min = pmin(`2019`, `2020`), 
          cnt_max = pmax(`2019`, `2020`))
 
-# city molecule yearly growth
+## city molecule yearly growth
 city.growth <- date.continuity %>% 
   filter(cnt_min >= 2) %>% 
   inner_join(raw.imp, 
@@ -40,7 +40,7 @@ city.growth <- date.continuity %>%
                           growth)) %>% 
   select(quarter, province, city, market, atc3, molecule, growth)
 
-# imputing
+## imputing
 imputing.data <- date.continuity %>% 
   filter(cnt_max >= 2) %>% 
   left_join(raw.imp, 
@@ -72,8 +72,9 @@ imputing.data <- date.continuity %>%
   select(year, date, quarter, province, city, district, pchc, market, atc3, 
          molecule, packid, sales_imp = sales, flag)
 
-# imputation result
+## imputation result
 imp.total <- raw.imp %>% 
+  mutate(quarter = stri_paste(year, quarter)) %>% 
   full_join(imputing.data, 
             by = c("year", "date", "quarter", "province", "city", "district", 
                    "pchc", "market", "atc3", "molecule", "packid")) %>% 
@@ -84,7 +85,7 @@ imp.total <- raw.imp %>%
 
 write_feather(imp.total, '03_Outputs/02_Servier_CHC_Imputation.feather')
 
-# QC
+## QC
 chk <- imp.total %>% 
   group_by(city, market, quarter) %>% 
   summarise(sales = sum(sales)) %>% 

@@ -7,7 +7,7 @@
 
 
 ##---- Sample ----
-# sample
+## sample
 chc.history <- read.xlsx("06_Deliveries/Servier_CHC_2016Q4_2020Q2_v3.xlsx", 
                          check.names = FALSE)
 
@@ -52,11 +52,11 @@ sh.19q3 <- chc.history %>%
             sales = sum(Sales, na.rm = TRUE)) %>% 
   ungroup()
 
-# pack ID existing & missing
+## pack ID existing & missing
 sh.exist.pack <- sh.19q3$packid[which(sh.19q3$packid %in% sh.bj.sample$packid)]
 sh.miss.pack <- sh.19q3$packid[which(!(sh.19q3$packid %in% sh.bj.sample$packid))]
 
-# growth of existing pack
+## growth of existing pack
 ## 去掉growth太大的pack
 growth.exist <- raw.total %>% 
   filter(city == "北京", quarter %in% c("2019Q3", "2020Q3")) %>% 
@@ -77,7 +77,7 @@ growth.exist <- raw.total %>%
 
 
 ##---- K-nn model ----
-# ims sales
+## ims sales
 ims.raw <- fread("02_Inputs/cn_IMS_Sales_Fdata_201912_1.txt", stringsAsFactors = FALSE)
 
 ims.sales <- ims.raw %>% 
@@ -90,7 +90,7 @@ ims.sales <- ims.raw %>%
   spread(date, sales, fill = 0) %>% 
   mutate(train_flag = if_else(packid %in% growth.exist$packid, 1, 0))
 
-# k-nn model
+## k-nn model
 train.sh <- ims.sales[ims.sales$train_flag == 1, ]
 test.sh <- ims.sales[ims.sales$train_flag == 0, ]
 
@@ -123,7 +123,7 @@ sh.weight <- as.data.frame(sh.model$D) %>%
   setDT() %>% 
   melt(id.vars = "packid", variable.name = "knn_level", value.name = "knn_weight")
 
-# weighted growth
+## weighted growth
 weight.growth <- sh.indice %>% 
   left_join(sh.weight, by = c("packid", "knn_level")) %>% 
   left_join(growth.exist, by = c("knn_pack" = "packid")) %>% 
@@ -132,7 +132,7 @@ weight.growth <- sh.indice %>%
   ungroup() %>% 
   select(city, packid, growth_1920q3)
 
-# growth
+## growth
 surplus <- setdiff(sh.19q3$packid[!(sh.19q3$packid %in% growth.exist$packid)], 
                    ims.sales$packid)
 

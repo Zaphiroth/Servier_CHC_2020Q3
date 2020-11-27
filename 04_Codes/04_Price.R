@@ -90,7 +90,7 @@ proj.price <- proj.total %>%
 
 write.xlsx(proj.price, "03_Outputs/04_Servier_CHC_Projection_with_Price.xlsx")
 
-# QC
+## QC
 chk <- proj.price %>% 
   group_by(city, market, quarter) %>% 
   summarise(sales = sum(sales)) %>% 

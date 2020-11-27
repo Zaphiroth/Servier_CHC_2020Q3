@@ -50,7 +50,7 @@ proj.adj <- proj.atc.adj %>%
 
 write.xlsx(proj.adj, "03_Outputs/05_Servier_CHC_Adjustment.xlsx")
 
-# QC
+## QC
 chk <- proj.adj %>% 
   group_by(city, market, quarter) %>% 
   summarise(sales = sum(sales)) %>% 

@@ -8,7 +8,7 @@
 
 ##---- Mapping table ----
 ## PCHC code
-pchc.universe <- read.xlsx("02_Inputs/Universe_PCHCCode_20201019.xlsx", sheet = "PCHC")
+pchc.universe <- read.xlsx("02_Inputs/Universe_PCHCCode_20201118.xlsx", sheet = "PCHC")
 
 pchc.mapping1 <- pchc.universe %>% 
   filter(!is.na(`单位名称`), !is.na(PCHC_Code)) %>% 
@@ -107,9 +107,14 @@ raw.history <- read_feather("02_Inputs/data/Servier_CHC_Total_Raw_2017-2019.feat
 
 ## Servier
 raw.ahbjjs <- read.csv('02_Inputs/data/noAZ_EPI_ahbjjs_2020Q3_packid_moleinfo.csv')
+raw.sd <- read.xlsx('02_Inputs/data/Servier_sd_2020Q3.xlsx')
 
 raw.total <- raw.ahbjjs %>% 
   filter(Project == 'Servier') %>% 
+  mutate(Year = as.character(Year), 
+         Month = as.character(Month), 
+         packcode = as.character(packcode)) %>% 
+  bind_rows(raw.sd) %>% 
   distinct(year = as.character(Year), 
            quarter = Quarter, 
            date = as.character(Month), 
@@ -151,7 +156,7 @@ raw.total <- raw.ahbjjs %>%
 
 write_feather(raw.total, '03_Outputs/01_Servier_CHC_Raw.feather')
 
-# QC
+## QC
 chk <- raw.total %>% 
   group_by(city, market, quarter, packid) %>% 
   summarise(sales = sum(sales), 

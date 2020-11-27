@@ -7,7 +7,7 @@
 
 
 ##---- Readin data ----
-# hospital universe
+## hospital universe
 hospital.universe.raw <- pchc.universe %>% 
   group_by(pchc = PCHC_Code) %>% 
   summarise(province = first(na.omit(`省`)),
@@ -27,15 +27,15 @@ hospital.universe <- raw.total %>%
             est = first(na.omit(est))) %>% 
   ungroup()
 
-# city segment
+## city segment
 segment <- read_xlsx("02_Inputs/seg_45cities.xlsx") %>% 
   mutate(seg_city = if_else(city == "上海", paste0(city, district), city)) %>% 
   select(seg_city, seg = seg_up)
 
-# sample range
+## sample range
 sample.pick <- read_xlsx("02_Inputs/历史数据样本范围_13Cities.xlsx", sheet = 2)
 
-# argument
+## argument
 sd.argument <- hospital.universe %>% 
   filter(province == "山东") %>% 
   # group_by(pchc) %>% 
@@ -60,35 +60,35 @@ proj.argument <- read_xlsx("02_Inputs/7省自变量.xlsx") %>%
          seg_city = trimws(seg_city)) %>% 
   distinct(province, city, district, seg_city, pchc, est, panel, panel_all)
 
-# outlier
+## outlier
 outlier <- read_xlsx("02_Inputs/outlier.xlsx") %>% 
   unlist()
 
-# projection flag
+## projection flag
 proj.flag <- read_xlsx("02_Inputs/ot2.xlsx") %>% 
   select(pchc = mapping, market = mkt) %>% 
   distinct() %>% 
   mutate(flag_ot = 1)
 
-# projection factor
+## projection factor
 proj.factor <- read_xlsx("02_Inputs/factor4.xlsx") %>% 
   select("market" = "mkt", "seg", "factor")
 
 
 ##---- Projection without Fuzhou & Shanghai ----
-# projection data
+## projection data
 proj.raw <- imp.total %>% 
   filter(!(city %in% c("上海", "福州")), 
          quarter %in% c("2020Q3"))
 
-# quarter sales
+## quarter sales
 proj.quarter <- proj.raw %>% 
   group_by(quarter, province, city, district, pchc, market, 
            atc3, molecule, packid) %>% 
   summarise(panel_sales = sum(sales, na.rm = TRUE)) %>% 
   ungroup()
 
-# universe set
+## universe set
 universe.set <- merge(distinct(proj.argument, province, city, district, seg_city, pchc), 
                       distinct(proj.raw, quarter)) %>% 
   left_join(distinct(proj.raw, province, city, district, 
@@ -104,7 +104,7 @@ universe.set <- merge(distinct(proj.argument, province, city, district, seg_city
   left_join(segment, by = "seg_city") %>% 
   mutate(seg = if_else(is.na(seg), 1, seg))
 
-# filtered set
+## filtered set
 filtered.set <- universe.set %>% 
   filter(panel == 1) %>% 
   left_join(proj.quarter, 
@@ -112,7 +112,7 @@ filtered.set <- universe.set %>%
                    "market", "atc3", "molecule", "packid")) %>% 
   mutate(panel_sales = if_else(is.na(panel_sales), 0, panel_sales))
 
-# projection parameter
+## projection parameter
 proj.parm <- data.table(filtered.set)[, {
   ux <- mean(est)
   uy <- mean(panel_sales)
@@ -123,16 +123,16 @@ proj.parm <- data.table(filtered.set)[, {
   list(slope = slope, intercept = intercept, spearman_cor = spearman_cor)
 }, by = list(city, quarter, packid, market, seg)]
 
-# QC
+## QC
 chk <- universe.set %>% 
   inner_join(proj.quarter, by = c("quarter", "province", "city", "district", 
                                   "pchc", "market", "atc3", "molecule", "packid")) %>% 
   mutate(panel_sales = if_else(is.na(panel_sales), 0, panel_sales))
 
 sum(chk$panel_sales, na.rm = TRUE) <= sum(proj.quarter$panel_sales, na.rm = TRUE)
-# TRUE means no multiple match
+## TRUE means no multiple match
 
-# projection result
+## projection result
 proj.most <- universe.set %>% 
   left_join(proj.quarter, by = c("province", "city", "district", "pchc", "quarter", 
                                  "market", "molecule", "atc3", "packid")) %>% 
@@ -203,7 +203,7 @@ proj.total <- proj.most %>%
 
 write_feather(proj.total, "03_Outputs/03_Servier_CHC_Projection.feather")
 
-# QC
+## QC
 chk <- proj.total %>% 
   group_by(city, market, quarter) %>% 
   summarise(sales = sum(sales)) %>% 

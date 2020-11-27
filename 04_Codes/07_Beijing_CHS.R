@@ -7,7 +7,7 @@
 
 
 ##---- Readin ----
-# pack info
+## pack info
 chs.pack <- read_xlsx("02_Inputs/ims.mapping1904.xlsx") %>% 
   distinct(packid = stri_pad_left(Pack_Id, 7, 0), pack_desc = Pck_Desc, 
            corp_desc = Corp_Desc, pack_size = PckSize_Desc)
@@ -19,13 +19,13 @@ chs.pack <- read_xlsx("02_Inputs/ims.mapping1904.xlsx") %>%
 #   mutate(packid = stri_pad_left(packid, 7, 0),
 #          `规格` = tolower(`规格`))
 
-# product name
+## product name
 product.name <- fread("02_Inputs/pfc与ims数据对应_20200824.csv") %>% 
   distinct(packid = stri_pad_left(Pack_Id, 7, 0), product = `商品名`)
 
 
 ##---- Beijing CHS projection ----
-# CHS raw
+## CHS raw
 raw.bj.chs <- raw.ahbjjs %>% 
   filter(Quarter %in% c('2020Q3'), Province == '北京市', 
          grepl("服务站", Hospital_Name)) %>% 
@@ -62,7 +62,7 @@ raw.bj.chs <- raw.ahbjjs %>%
   filter(!(market == "IHD" & product == "CORLENTOR")) %>% 
   filter(!(market == "OAD" & product == "TANG LIN"))
 
-# adjust
+## adjust
 chs.ihd.adj <- raw.bj.chs %>% 
   filter(atc2 %in% c("C07", "C08")) %>% 
   mutate(factor = if_else(atc2 == "C07", 0.25, 0.1),

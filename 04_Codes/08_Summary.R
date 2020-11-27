@@ -11,7 +11,7 @@
 product.name <- fread("02_Inputs/pfc与ims数据对应_20200824.csv") %>% 
   distinct(packid = stri_pad_left(Pack_Id, 7, 0), product = `商品名`)
 
-# flag
+## ZB flag
 flag.raw <- read.xlsx("02_Inputs/13城市的招标flag_zs_flag.xlsx")
 
 flag <- flag.raw %>% 
@@ -24,12 +24,12 @@ proj.zs <- proj.adj %>%
   filter(!(city %in% c("北京", "上海") & zs_flag != 1)) %>% 
   filter(quarter == '2020Q3')
 
-# corporation
+## corporation
 corp.ref <- fread("02_Inputs/cn_corp_ref_201912_1.txt", 
                   stringsAsFactors = FALSE, sep = "|") %>% 
   distinct()
 
-# pack
+## pack
 pack.ref <- fread("02_Inputs/cn_prod_ref_201912_1.txt", 
                   stringsAsFactors = FALSE, sep = "|") %>% 
   distinct() %>% 
@@ -42,11 +42,11 @@ corp.pack <- pack.ref %>%
   mutate(Corp_Desc = if_else(Corp_Desc == "LUYE GROUP", "LVYE GROUP", Corp_Desc)) %>% 
   select(packid = Pack_Id, pack_desc = Pck_Desc, corp_desc = Corp_Desc)
 
-# pack size
+## pack size
 pack.size <- pack.ref %>% 
   distinct(packid = Pack_Id, pack_size = PckSize_Desc)
 
-# join
+## join
 chc.part <- bind_rows(proj.zs, proj.sh) %>% 
   left_join(product.name, by = "packid") %>% 
   left_join(corp.pack, by = "packid") %>% 
@@ -65,7 +65,7 @@ chc.part <- bind_rows(proj.zs, proj.sh) %>%
          sales = if_else(units == 0, 0, sales),
          units = if_else(sales == 0, 0, units))
 
-# A10S
+## A10S
 a10s <- proj.adj %>% 
   filter(atc3 == "A10S") %>% 
   left_join(product.name, by = "packid") %>% 
@@ -81,7 +81,7 @@ a10s <- proj.adj %>%
             sales = sum(sales, na.rm = TRUE)) %>% 
   ungroup()
 
-# total CHC
+## total CHC
 total.chc <- bind_rows(chc.part, a10s, bj.chs) %>% 
   select(Pack_ID = packid, Channel = channel, Province = province, City = city, 
          Date = quarter, ATC3 = atc3, MKT = market, Molecule_Desc = molecule, 
@@ -90,13 +90,13 @@ total.chc <- bind_rows(chc.part, a10s, bj.chs) %>%
 
 
 ##---- Add flag ----
-# readin 4+7 flag
+## readin 4+7 flag
 capital.47 <- read_xlsx("02_Inputs/4+7+省会名单.xlsx") %>% 
   filter(`类别` %in% "4+7城市") %>% 
   mutate(City = gsub("市", "", `城市`)) %>% 
   select("City", "是否是4+7城市" = "类别")
 
-# product bid
+## product bid
 prod.bid <- read_xlsx("02_Inputs/Displayname Mapping.xlsx", sheet = 1) %>% 
   mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0),
          Pack_ID_5 = stri_sub(Pack_ID, 1, 5),
@@ -110,13 +110,13 @@ prod.bid <- read_xlsx("02_Inputs/Displayname Mapping.xlsx", sheet = 1) %>%
            name3 = `Display Name3 CN`,
            Pack_ID_5)
 
-# join
+## join
 chc.bid <- total.chc %>% 
   left_join(capital.47, by = "City") %>% 
   mutate(Pack_ID_5 = stri_sub(Pack_ID, 1, 5)) %>% 
   left_join(prod.bid, by = "Pack_ID_5")
 
-# corporation, ATC3
+## corporation, ATC3
 corp.atc3 <- read_xlsx("02_Inputs/产品性质_chpa 08.23(1).xlsx", sheet = 1)
 
 corp.type <- distinct(corp.atc3, Corp_Desc, Mnf_Type = `厂家性质`)
@@ -133,14 +133,14 @@ corp.add <- read_xlsx("02_Inputs/Corp_Info_20200908.xlsx") %>%
   mutate(Mnf_Type1 = if_else(is.na(Mnf_Type1), "Local", Mnf_Type1),
          Mnf_Type1 = if_else(Mnf_Type1 %in% c("Imported", "Joint Venture"), "MNC", Mnf_Type1))
 
-# molecule bid
+## molecule bid
 molecule.bid <- distinct(chc.bid, Molecule_Desc, name1) %>% 
   filter(name1 == "4+7分子") %>% 
   right_join(molecule.cn, by = "Molecule_Desc") %>% 
   mutate(name1 = if_else(Molecule_CN %in% c("赖诺普利", "卡托普利"), "4+7分子", name1)) %>% 
   select(Molecule_Desc, name1)
 
-# join
+## join
 chc.flag <- chc.bid %>% 
   select(-name1) %>% 
   left_join(molecule.bid, by = "Molecule_Desc") %>% 
@@ -305,7 +305,6 @@ chc.history <- read.xlsx("06_Deliveries/Servier_CHC_2016Q4_2020Q2_v3.xlsx",
 #          DosageUnits = round(DosageUnits), 
 #          Date = gsub('2019', '2020', Date))
 
-# update 2020Q2
 chc.result <- chc.history %>% 
   mutate(Pack_ID = stri_pad_left(Pack_ID, 7, 0), 
          Pack_ID = if_else(stri_sub(Pack_ID, 1, 5) == '06470', 
@@ -387,7 +386,7 @@ chc.result <- chc.history %>%
 
 write.xlsx(chc.result, "03_Outputs/08_Servier_CHC_2016Q4_2020Q3.xlsx")
 
-# QC
+## QC
 chk <- chc.result %>% 
   distinct(Pack_ID, ATC3, Molecule_Desc, Prod_Desc, Pck_Desc, Corp_Desc, 
            TherapeuticClsII, Prod_CN_Name, Package, Dosage, Quantity) %>% 
