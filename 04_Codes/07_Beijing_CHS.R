@@ -36,11 +36,13 @@ raw.bj.chs <- raw.ahbjjs %>%
            city = if_else(City == "市辖区", "北京", gsub("市", "", City)), 
            district = County, 
            hospital = Hospital_Name, 
+           atc3 = stri_sub(ATC4_Code, 1, 4), 
+           molecule = Molecule_Desc, 
            packid = stri_pad_left(packcode, 7, 0), 
            price = Price, 
            units = Value / Price, 
            sales = Value) %>% 
-  left_join(market.def, by = "packid") %>% 
+  left_join(market.def, by = 'molecule') %>% 
   filter(!is.na(market)) %>% 
   group_by(year, quarter, province, city, market, atc3, molecule, packid) %>% 
   summarise(sales = sum(sales, na.rm = TRUE),

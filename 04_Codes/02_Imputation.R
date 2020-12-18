@@ -9,7 +9,7 @@
 ##---- Imputing inside existing provinces ----
 raw.imp <- raw.total %>% 
   filter(city %in% kTargetCity) %>% 
-  filter(province %in% c('安徽', '北京', '江苏', '山东')) %>% 
+  # filter(province %in% c('安徽', '北京', '江苏', '山东')) %>% 
   mutate(quarter = stri_sub(quarter, 5, 6), 
          month = stri_sub(date, 5, 6))
 

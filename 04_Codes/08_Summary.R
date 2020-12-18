@@ -7,7 +7,7 @@
 
 
 #---- CHC ----
-# product name
+## product name
 product.name <- fread("02_Inputs/pfc与ims数据对应_20200824.csv") %>% 
   distinct(packid = stri_pad_left(Pack_Id, 7, 0), product = `商品名`)
 
@@ -51,7 +51,7 @@ chc.part <- bind_rows(proj.zs, proj.sh) %>%
   left_join(product.name, by = "packid") %>% 
   left_join(corp.pack, by = "packid") %>% 
   left_join(pack.size, by = "packid") %>% 
-  filter(stri_sub(pack_desc, 1, 4) %in% c("CAP ", "TAB ", "PILL")) %>% 
+  filter(stri_sub(pack_desc, 1, 3) %in% c("CAP", "TAB", "PIL")) %>% 
   mutate(dosage_units = pack_size * units,
          channel = "CHC") %>% 
   group_by(province, city, year, quarter, market, atc3, molecule, packid, 
@@ -71,7 +71,6 @@ a10s <- proj.adj %>%
   left_join(product.name, by = "packid") %>% 
   left_join(corp.pack, by = "packid") %>% 
   left_join(pack.size, by = "packid") %>% 
-  filter(stri_sub(pack_desc, 1, 4) %in% c("CAP ", "TAB ", "PILL")) %>% 
   mutate(dosage_units = pack_size * units,
          channel = "CHC") %>% 
   group_by(province, city, year, quarter, market, atc3, molecule, packid, 
@@ -81,8 +80,15 @@ a10s <- proj.adj %>%
             sales = sum(sales, na.rm = TRUE)) %>% 
   ungroup()
 
+## chpa
+chpa.info <- read.xlsx('02_Inputs/ims_chpa_to20Q3.xlsx', cols = 1:21, startRow = 4) %>%  
+  distinct(corp_desc1 = Corp_Desc, product1 = Prd_desc, packid = Pack_ID)
+
 ## total CHC
 total.chc <- bind_rows(chc.part, a10s, bj.chs) %>% 
+  left_join(chpa.info, by = 'packid') %>% 
+  mutate(product = if_else(is.na(product), product1, product), 
+         corp_desc = if_else(is.na(corp_desc), corp_desc1, corp_desc)) %>% 
   select(Pack_ID = packid, Channel = channel, Province = province, City = city, 
          Date = quarter, ATC3 = atc3, MKT = market, Molecule_Desc = molecule, 
          Prod_Desc = product, Pck_Desc = pack_desc, Corp_Desc = corp_desc, 
@@ -280,7 +286,7 @@ write.xlsx(chc.add, '03_Outputs/08_Servier_CHC_2020Q3.xlsx')
 
 
 ##---- Result ----
-chc.history <- read.xlsx("06_Deliveries/Servier_CHC_2016Q4_2020Q2_v3.xlsx", 
+chc.history <- read.xlsx("06_Deliveries/CHC_MAX_16Q420Q2_0910.xlsx", 
                          check.names = FALSE)
 
 # DPP IV
@@ -317,7 +323,7 @@ chc.result <- chc.history %>%
          Corp_Desc = if_else(Prod_Desc == 'ONGLYZA', 'ASTRAZENECA GROUP', Corp_Desc)) %>% 
   bind_rows(chc.add) %>% 
   filter(Sales > 0, Units > 0, DosageUnits > 0, 
-         Pack_ID %in% market.def$packid, 
+         # Pack_ID %in% market.def$packid, 
          !(MKT %in% c("HTN", "IHD") & 
              !(stri_sub(Package, 1, 3) %in% c("CAP", "TAB", "PIL")))) %>% 
   # filter(!(Channel == 'CHC' & 

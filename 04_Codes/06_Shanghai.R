@@ -8,7 +8,7 @@
 
 ##---- Sample ----
 ## sample
-chc.history <- read.xlsx("06_Deliveries/Servier_CHC_2016Q4_2020Q2_v3.xlsx", 
+chc.history <- read.xlsx("06_Deliveries/CHC_MAX_16Q420Q2_0910.xlsx", 
                          check.names = FALSE)
 
 sh.bj.sample <- chc.history %>% 
@@ -184,7 +184,7 @@ proj.sh <- sh.19q3 %>%
          price = if_else(is.na(price), price_year, price), 
          price = if_else(is.na(price), price_pack, price), 
          price = if_else(is.na(price), price_pack_year, price), 
-         units = sales / price) %>% 
+         units = if_else(!is.na(price), sales / price, units)) %>% 
   select(year, quarter, province, city, market, atc3, molecule, packid, 
          units, sales, price)
 

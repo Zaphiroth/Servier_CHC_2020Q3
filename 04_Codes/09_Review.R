@@ -48,6 +48,9 @@ write.xlsx(price.check, '05_Internal_Review/Price_Check.xlsx')
 
 ##---- Check SOP -----
 # CHPA
+market.result <- chc.result %>% 
+  distinct(Molecule_Desc, MKT)
+
 chpa.format <- read.xlsx('05_Internal_Review/ims_chpa_to20Q3_format.xlsx')
 
 servier.chpa <- chpa.format %>% 
@@ -59,27 +62,27 @@ servier.chpa <- chpa.format %>%
                           Pck_Desc, Corp_Desc, quarter), 
               names_from = measure, 
               values_from = value) %>% 
-  filter(Pack_ID %in% unique(chc.result$Pack_ID), 
-         stri_sub(quarter, 1, 4) %in% c('2018', '2019', '2020')) %>% 
-  left_join(market.def, by = c('Pack_ID' = 'packid')) %>% 
+  filter(stri_sub(quarter, 1, 4) %in% c('2018', '2019', '2020')) %>% 
+  left_join(market.result, by = 'Molecule_Desc') %>% 
+  filter(!is.na(MKT)) %>% 
   mutate(Prd_desc = trimws(stri_sub(Prd_desc, 1, -4))) %>% 
-  select(Pack_ID, Date = quarter, ATC3 = ATC3_Code, MKT = market, Molecule_Desc, 
+  select(Pack_ID, Date = quarter, MKT, ATC3 = ATC3_Code, Molecule_Desc, 
          Prod_Desc = Prd_desc, Pck_Desc, Corp_Desc, Units = UNIT, 
          Sales = RENMINBI)
 
 write.xlsx(servier.chpa, '05_Internal_Review/Servier_CHPA_2018Q1_2020Q3.xlsx')
 
 # Update
-chpa.info <- servier.chpa %>% 
-  distinct(Pack_ID, ATC3, Molecule_Desc, Prod_Desc, Pck_Desc, Corp_Desc)
-
-delivery.update <- chc.result %>% 
-  distinct(Pack_ID, Channel, Province, City, Date, MKT, 
-           Sales, Units, DosageUnits) %>% 
-  left_join(chpa.info, by = 'Pack_ID') %>% 
-  filter(!is.na(ATC3), stri_sub(Date, 1, 4) %in% c('2018', '2019', '2020'))
-
-write.xlsx(delivery.update, '05_Internal_Review/Delivery_Updated.xlsx')
+# chpa.info <- servier.chpa %>% 
+#   distinct(Pack_ID, ATC3, Molecule_Desc, Prod_Desc, Pck_Desc, Corp_Desc)
+# 
+# delivery.update <- chc.result %>% 
+#   distinct(Pack_ID, Channel, Province, City, Date, MKT, 
+#            Sales, Units, DosageUnits) %>% 
+#   left_join(chpa.info, by = 'Pack_ID') %>% 
+#   filter(!is.na(ATC3), stri_sub(Date, 1, 4) %in% c('2018', '2019', '2020'))
+# 
+# write.xlsx(delivery.update, '05_Internal_Review/Delivery_Updated.xlsx')
 
 
 

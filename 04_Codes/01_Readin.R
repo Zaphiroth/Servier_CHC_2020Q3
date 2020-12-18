@@ -33,16 +33,16 @@ pchc.mapping4 <- pchc.mapping3 %>%
   ungroup()
 
 ## IMS pack
-ims.pack <- fread("02_Inputs/pfc与ims数据对应_20200824.csv") %>% 
-  mutate(packid = stri_pad_left(Pack_Id, 7, 0),
-         atc3 = stri_sub(ATC4_Code, 1, 4),
-         atc2 = stri_sub(ATC4_Code, 1, 3)) %>% 
-  distinct(packid, atc3, atc2, molecule_desc = Molecule_Desc)
+# ims.pack <- fread("02_Inputs/pfc与ims数据对应_20200824.csv") %>% 
+#   mutate(packid = stri_pad_left(Pack_Id, 7, 0),
+#          atc3 = stri_sub(ATC4_Code, 1, 4),
+#          atc2 = stri_sub(ATC4_Code, 1, 3)) %>% 
+#   distinct(packid, atc3, atc2, molecule_desc = Molecule_Desc)
 
 ## market definition
 market.def <- read_xlsx("02_Inputs/Market_Definition_20200824.xlsx") %>% 
   distinct(molecule = Molecule_Desc, market = TA) %>% 
-  right_join(ims.pack, by = c('molecule' = "molecule_desc")) %>% 
+  # right_join(ims.pack, by = c('molecule' = "molecule_desc")) %>% 
   filter(!is.na(market))
 
 ## target city
@@ -63,6 +63,8 @@ raw.history.gz <- read_feather("02_Inputs/data/Servier_guangzhou_171819_final.fe
            district, 
            pchc = PCHC, 
            hospital = hosp_name, 
+           atc3 = ATC3_Code, 
+           molecule = Molecule_Desc, 
            packid = stri_pad_left(PFC, 7, 0), 
            price = VALUE / UNIT, 
            units = UNIT, 
@@ -71,7 +73,8 @@ raw.history.gz <- read_feather("02_Inputs/data/Servier_guangzhou_171819_final.fe
   mutate(district = if_else(is.na(district.x), district.y, district.x), 
          pchc = if_else(is.na(pchc.x), pchc.y, pchc.x)) %>% 
   filter(!is.na(pchc)) %>% 
-  left_join(market.def, by = "packid") %>% 
+  left_join(market.def, by = 'molecule') %>% 
+  filter(!is.na(market)) %>% 
   select(year, date, quarter, province, city, district, pchc, market, atc3, 
          molecule, packid, price, units, sales)
 
@@ -106,15 +109,22 @@ raw.history <- read_feather("02_Inputs/data/Servier_CHC_Total_Raw_2017-2019.feat
   ungroup()
 
 ## Servier
-raw.ahbjjs <- read.csv('02_Inputs/data/noAZ_EPI_ahbjjs_2020Q3_packid_moleinfo.csv')
-raw.sd <- read.xlsx('02_Inputs/data/Servier_sd_2020Q3.xlsx')
+raw.ahbjjs <- read_csv('02_Inputs/data/Servier_ahbjjssdzj_17181920Q1Q2Q3_fj1718_nozj20Q3_packid_moleinfo.csv', 
+                       locale = locale(encoding = 'GB18030'))
+raw.fj1 <- read.xlsx('02_Inputs/data/Servier_福建省_2019_packid_moleinfo(predicted by Servier_fj_2018_packid_moleinfo_v3).xlsx')
+raw.fj2 <- read.xlsx('02_Inputs/data/Servier_福建省_2020_packid_moleinfo(predicted by Servier_fj_2018_packid_moleinfo_v3).xlsx')
+raw.zj <- read.xlsx('02_Inputs/data/Servier_浙江省_2020Q3_packid_moleinfo(predicted by Servier_zj_2020Q1Q2_packid_moleinfo_v3).xlsx')
+raw.gz <- read.xlsx('02_Inputs/data/gz_广东省_2020Q3_packid_moleinfo.xlsx')
 
-raw.total <- raw.ahbjjs %>% 
+raw.total <- bind_rows(raw.ahbjjs) %>% 
   filter(Project == 'Servier') %>% 
   mutate(Year = as.character(Year), 
          Month = as.character(Month), 
          packcode = as.character(packcode)) %>% 
-  bind_rows(raw.sd) %>% 
+  bind_rows(raw.sd, raw.zj) %>% 
+  select(-IntPrd_Desc, -IntStr_Desc, -IntSize_Desc, -IntVol_Desc, -IntPck_Desc, 
+         -PRES_Desc, -PROTECTION_Desc, -COMP_Desc) %>% 
+  bind_rows(raw.gz) %>% 
   distinct(year = as.character(Year), 
            quarter = Quarter, 
            date = as.character(Month), 
@@ -124,6 +134,7 @@ raw.total <- raw.ahbjjs %>%
            hospital = Hospital_Name, 
            atc4 = ATC4_Code, 
            nfc = NFC123_Code, 
+           molecule = Molecule_Desc, 
            product = Prd_desc, 
            packid = stri_pad_left(packcode, 7, 0), 
            price = Price, 
@@ -131,7 +142,8 @@ raw.total <- raw.ahbjjs %>%
            sales = Value) %>% 
   left_join(pchc.mapping3, by = c('province', 'city', 'district', 'hospital')) %>% 
   filter(!is.na(pchc)) %>% 
-  left_join(market.def, by = 'packid') %>% 
+  left_join(market.def, by = 'molecule') %>% 
+  mutate(atc3 = stri_sub(atc4, 1, 4)) %>% 
   bind_rows(raw.history) %>% 
   filter(!is.na(market)) %>% 
   filter(quarter %in% c('2019Q3', '2020Q3'), 
