@@ -61,4 +61,4 @@ proj.atc.adj %>%
   group_by(city, panel) %>% 
   summarise(sales = sum(sales)) %>% 
   ungroup() %>% 
-  pivot_wider(names_from = panel, values_from = sales)
+  pivot_wider(names_from = panel, values_from = sales, values_fill = 0)

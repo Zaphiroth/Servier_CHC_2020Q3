@@ -78,7 +78,7 @@ growth.exist <- raw.total %>%
 
 ##---- K-nn model ----
 ## ims sales
-ims.raw <- fread("02_Inputs/cn_IMS_Sales_Fdata_201912_1.txt", stringsAsFactors = FALSE)
+ims.raw <- fread("02_Inputs/cn_IMS_Sales_Fdata_202010_1.txt", stringsAsFactors = FALSE)
 
 ims.sales <- ims.raw %>% 
   mutate(date = gsub("M", "", Period_Code),

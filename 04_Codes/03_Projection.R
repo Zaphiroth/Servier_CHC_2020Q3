@@ -152,7 +152,7 @@ proj.most <- universe.set %>%
 # projection data
 proj.raw.fz <- imp.total %>% 
   filter(city == '福州', 
-         quarter %in% c("2020Q1", "2020Q2")) %>% 
+         quarter %in% c("2020Q3")) %>% 
   left_join(hospital.universe, 
             by = c('province', 'city', 'district', 'pchc'))
 
@@ -195,7 +195,7 @@ proj.fz <- bind_rows(proj.fz1, proj.fz2) %>%
 
 
 ##---- Result ----
-proj.total <- proj.most %>% 
+proj.total <- bind_rows(proj.most, proj.fz) %>% 
   group_by(year, quarter, province, city, pchc, market, 
            atc3, molecule, packid, panel) %>% 
   summarise(sales = sum(sales, na.rm = TRUE)) %>% 
